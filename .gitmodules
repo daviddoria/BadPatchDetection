@@ -1,0 +1,6 @@
+[submodule "PatchClustering"]
+	path = PatchClustering
+	url = https://github.com/daviddoria/PatchClustering.git
+[submodule "PatchComparison"]
+	path = PatchComparison
+	url = https://github.com/daviddoria/PatchComparison.git
