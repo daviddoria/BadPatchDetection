@@ -35,7 +35,8 @@ int main(int argc, char* argv[])
   ////////////////////////////////
 
   std::vector<itk::Index<2> > indices = ITKHelpers::GetDownsampledIndicesInRegion(image->GetLargestPossibleRegion(), stride);
-  std::vector<itk::ImageRegion<2> > patchesToUse = ITKHelpers::GetPatchesCenteredAtIndices(indices, patchRadius);
+  std::vector<itk::ImageRegion<2> > patchesToUse =
+         ITKHelpers::GetValidPatchesCenteredAtIndices(indices, image->GetLargestPossibleRegion(), patchRadius);
 
   //std::vector<itk::ImageRegion<2> > allPatches = ITKHelpers::GetAllPatches(reader->GetOutput()->GetLargestPossibleRegion(), patchRadius);
   std::cout << "There are " << patchesToUse.size() << " patches." << std::endl;
@@ -109,8 +110,8 @@ int main(int argc, char* argv[])
     } // end loop j
 
 
-    itk::Index<2> patchCenter = ITKHelpers::GetRegionCenter(allPatches[i]);
-    itk::Index<2> bestMatchCenter = ITKHelpers::GetRegionCenter(allPatches[bestId]);
+    itk::Index<2> patchCenter = ITKHelpers::GetRegionCenter(patchesToUse[i]);
+    itk::Index<2> bestMatchCenter = ITKHelpers::GetRegionCenter(patchesToUse[bestId]);
 
     // Location
     itk::CovariantVector<float, 3> locationPixel;
