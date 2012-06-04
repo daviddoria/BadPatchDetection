@@ -34,26 +34,29 @@ int main(int argc, char* argv[])
 
   ////////////////////////////////
 
-  itk::ImageRegionIterator<ImageType> imageIterator(image,
-                                                    image->GetLargestPossibleRegion());
+  std::vector<itk::Index<2> > indices = ITKHelpers::GetDownsampledIndicesInRegion(image->GetLargestPossibleRegion(), stride);
+  std::vector<itk::ImageRegion<2> > patchesToUse = ITKHelpers::GetPatchesCenteredAtIndices(indices, patchRadius);
+
+  //std::vector<itk::ImageRegion<2> > allPatches = ITKHelpers::GetAllPatches(reader->GetOutput()->GetLargestPossibleRegion(), patchRadius);
+  std::cout << "There are " << patchesToUse.size() << " patches." << std::endl;
 
   EigenHelpers::VectorOfVectors vectorizedPatches;
   std::vector<itk::ImageRegion<2> > vectorizedPatchRegions;
 
-  std::vector<itk::ImageRegion<2> > allPatches = ITKHelpers::GetAllPatches(reader->GetOutput()->GetLargestPossibleRegion(), patchRadius);
-
-  for(unsigned int i = 0; i < allPatches.size(); ++i)
+  for(unsigned int i = 0; i < patchesToUse.size(); ++i)
   {
-    Eigen::VectorXf v = PatchClustering::VectorizePatch(image, allPatches[i]);
+    Eigen::VectorXf v = PatchClustering::VectorizePatch(image, patchesToUse[i]);
 
     vectorizedPatches.push_back(v);
-    vectorizedPatchRegions.push_back(allPatches[i]);
+    vectorizedPatchRegions.push_back(patchesToUse[i]);
   }
 
   std::cout << "There are " << vectorizedPatchRegions.size() << " regions." << std::endl;
 
   unsigned int numberOfDimensionsToKeep = 10;
   EigenHelpers::VectorOfVectors projectedVectors = EigenHelpers::DimensionalityReduction(vectorizedPatches, numberOfDimensionsToKeep);
+
+  std::cout << "There are " << projectedVectors.size() << " projectedVectors." << std::endl;
 
   /////////////////////
   itk::CovariantVector<float, 3> zeroVector;
