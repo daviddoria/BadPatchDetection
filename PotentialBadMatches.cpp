@@ -52,7 +52,6 @@ int main(int argc, char* argv[])
 
   for(unsigned int i = 0; i < allPatches.size(); ++i)
   {
-    std::cout << i << " of " << allPatches.size() << std::endl;
     itk::Index<2> currentPixelLocation = ITKHelpers::GetRegionCenter(allPatches[i]);
 
     if(currentPixelLocation[0] % stride != 0 ||
@@ -60,6 +59,9 @@ int main(int argc, char* argv[])
     {
       continue;
     }
+
+    std::cout << i << " of " << allPatches.size() << std::endl;
+
     float minDistance = std::numeric_limits<float>::max();
     unsigned int bestId = 0;
 

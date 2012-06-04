@@ -32,30 +32,44 @@ int main(int argc, char* argv[])
 
   ImageType* image = reader->GetOutput();
 
-  ////////////////////////////////
+  //////////// Compute the covariance matrix from a downsampled set of patches ////////////////////
 
-  std::vector<itk::Index<2> > indices = ITKHelpers::GetDownsampledIndicesInRegion(image->GetLargestPossibleRegion(), stride);
-  std::vector<itk::ImageRegion<2> > patchesToUse =
-         ITKHelpers::GetValidPatchesCenteredAtIndices(indices, image->GetLargestPossibleRegion(), patchRadius);
+  std::vector<itk::Index<2> > downsampledIndices = ITKHelpers::GetDownsampledIndicesInRegion(image->GetLargestPossibleRegion(), stride);
+  std::vector<itk::ImageRegion<2> > downsampledPatches =
+         ITKHelpers::GetValidPatchesCenteredAtIndices(downsampledIndices, image->GetLargestPossibleRegion(), patchRadius);
 
   //std::vector<itk::ImageRegion<2> > allPatches = ITKHelpers::GetAllPatches(reader->GetOutput()->GetLargestPossibleRegion(), patchRadius);
-  std::cout << "There are " << patchesToUse.size() << " patches." << std::endl;
+  std::cout << "There are " << downsampledPatches.size() << " patches." << std::endl;
 
-  EigenHelpers::VectorOfVectors vectorizedPatches;
-  std::vector<itk::ImageRegion<2> > vectorizedPatchRegions;
+  EigenHelpers::VectorOfVectors vectorizedDownsampledPatches;
 
-  for(unsigned int i = 0; i < patchesToUse.size(); ++i)
+  for(unsigned int i = 0; i < downsampledPatches.size(); ++i)
   {
-    Eigen::VectorXf v = PatchClustering::VectorizePatch(image, patchesToUse[i]);
+    Eigen::VectorXf v = PatchClustering::VectorizePatch(image, downsampledPatches[i]);
 
-    vectorizedPatches.push_back(v);
-    vectorizedPatchRegions.push_back(patchesToUse[i]);
+    vectorizedDownsampledPatches.push_back(v);
   }
 
-  std::cout << "There are " << vectorizedPatchRegions.size() << " regions." << std::endl;
+  std::cout << "There are " << vectorizedDownsampledPatches.size() << " vectorizedDownsampledPatches." << std::endl;
 
   unsigned int numberOfDimensionsToKeep = 10;
-  EigenHelpers::VectorOfVectors projectedVectors = EigenHelpers::DimensionalityReduction(vectorizedPatches, numberOfDimensionsToKeep);
+
+  Eigen::MatrixXf covarianceMatrix = EigenHelpers::ConstructCovarianceMatrix(vectorizedDownsampledPatches);
+
+  ////////// Project all of the patches using the covariance matrix constructed from the downsampled set /////
+
+  std::vector<itk::ImageRegion<2> > allPatches = ITKHelpers::GetAllPatches(image->GetLargestPossibleRegion(), patchRadius);
+
+  EigenHelpers::VectorOfVectors vectorizedPatches;
+
+  for(unsigned int i = 0; i < allPatches.size(); ++i)
+  {
+    Eigen::VectorXf v = PatchClustering::VectorizePatch(image, allPatches[i]);
+    vectorizedPatches.push_back(v);
+  }
+
+  EigenHelpers::VectorOfVectors projectedVectors =
+          EigenHelpers::DimensionalityReduction(vectorizedPatches, covarianceMatrix, numberOfDimensionsToKeep);
 
   std::cout << "There are " << projectedVectors.size() << " projectedVectors." << std::endl;
 
@@ -110,8 +124,8 @@ int main(int argc, char* argv[])
     } // end loop j
 
 
-    itk::Index<2> patchCenter = ITKHelpers::GetRegionCenter(patchesToUse[i]);
-    itk::Index<2> bestMatchCenter = ITKHelpers::GetRegionCenter(patchesToUse[bestId]);
+    itk::Index<2> patchCenter = ITKHelpers::GetRegionCenter(allPatches[i]);
+    itk::Index<2> bestMatchCenter = ITKHelpers::GetRegionCenter(allPatches[bestId]);
 
     // Location
     itk::CovariantVector<float, 3> locationPixel;
