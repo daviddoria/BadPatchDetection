@@ -22,4 +22,4 @@ ADD_EXECUTABLE(PotentialBadMatchesProjected PotentialBadMatchesProjected.cpp)
 TARGET_LINK_LIBRARIES(PotentialBadMatchesProjected ${ITK_LIBRARIES} ITKHelpers EigenHelpers)
 
 ADD_EXECUTABLE(CompareBadPatches CompareBadPatches.cpp)
-TARGET_LINK_LIBRARIES(CompareBadPatches ${ITK_LIBRARIES})
+TARGET_LINK_LIBRARIES(CompareBadPatches ${ITK_LIBRARIES} ITKHelpers)

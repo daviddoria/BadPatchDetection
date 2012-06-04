@@ -53,9 +53,10 @@ int main(int argc, char* argv[])
   for(unsigned int i = 0; i < allPatches.size(); ++i)
   {
     std::cout << i << " of " << allPatches.size() << std::endl;
+    itk::Index<2> currentPixelLocation = ITKHelpers::GetRegionCenter(allPatches[i]);
 
-    if(allPatches[i].GetIndex()[0] % stride != 0 ||
-       allPatches[i].GetIndex()[1] % stride != 0)
+    if(currentPixelLocation[0] % stride != 0 ||
+       currentPixelLocation[1] % stride != 0)
     {
       continue;
     }
@@ -88,8 +89,8 @@ int main(int argc, char* argv[])
         pixel2 = patch2Iterator.Get();
 
         distance = (pixel1[0] - pixel2[0]) * (pixel1[0] - pixel2[0]) +
-                        (pixel1[1] - pixel2[1]) * (pixel1[1] - pixel2[1]) +
-                        (pixel1[2] - pixel2[2]) * (pixel1[2] - pixel2[2]);
+                   (pixel1[1] - pixel2[1]) * (pixel1[1] - pixel2[1]) +
+                   (pixel1[2] - pixel2[2]) * (pixel1[2] - pixel2[2]);
 
         // Potentially use the maximum distance of the separate color channels.
         // Maybe instead of the following, compute the full SSD for each channel, and take the max of those.

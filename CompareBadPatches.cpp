@@ -53,13 +53,13 @@ int main(int argc, char* argv[])
   NNFieldReaderType::Pointer nnFieldReader = NNFieldReaderType::New();
   nnFieldReader->SetFileName(nnFieldFileName);
   nnFieldReader->Update();
-  NNFieldImageType* nnField = nnFieldReader->GetOutput();
+  NNFieldImageType* nnOffsetField = nnFieldReader->GetOutput();
 
   itk::Size<2> patchSize = {{patchRadius * 2 + 1, patchRadius * 2 + 1}};
 
   std::vector<itk::Index<2> > indicesToOutput;
 
-  itk::ImageRegionConstIterator<NNFieldImageType> nnFieldIterator(nnField, nnField->GetLargestPossibleRegion());
+  itk::ImageRegionConstIterator<NNFieldImageType> nnFieldIterator(nnOffsetField, nnOffsetField->GetLargestPossibleRegion());
 
   while(!nnFieldIterator.IsAtEnd())
   {
@@ -88,13 +88,13 @@ int main(int argc, char* argv[])
   for(unsigned int i = 0; i < indicesToOutput.size(); ++i)
   {
     itk::Index<2> sourceIndex = indicesToOutput[i];
-    itk::ImageRegion<2> sourceRegion(sourceIndex, patchSize);
+    itk::ImageRegion<2> sourceRegion = ITKHelpers::GetRegionInRadiusAroundPixel(sourceIndex, patchRadius);
 
     itk::Index<2> matchIndex;
-    matchIndex[0] = sourceIndex[0] + nnField->GetPixel(sourceIndex)[0];
-    matchIndex[1] = sourceIndex[1] + nnField->GetPixel(sourceIndex)[1];
+    matchIndex[0] = sourceIndex[0] + nnOffsetField->GetPixel(sourceIndex)[0];
+    matchIndex[1] = sourceIndex[1] + nnOffsetField->GetPixel(sourceIndex)[1];
 
-    itk::ImageRegion<2> matchRegion(matchIndex, patchSize);
+    itk::ImageRegion<2> matchRegion = ITKHelpers::GetRegionInRadiusAroundPixel(matchIndex, patchRadius);
 
     // Create the output image
     itk::Index<2> sourceOutputIndex = {{0, patchSize[0] * 2 * i}};

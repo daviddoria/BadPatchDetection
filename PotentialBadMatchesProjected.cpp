@@ -40,19 +40,15 @@ int main(int argc, char* argv[])
   EigenHelpers::VectorOfVectors vectorizedPatches;
   std::vector<itk::ImageRegion<2> > vectorizedPatchRegions;
 
-  while(!imageIterator.IsAtEnd())
-    {
-    itk::ImageRegion<2> region = ITKHelpers::GetRegionInRadiusAroundPixel(imageIterator.GetIndex(), patchRadius);
+  std::vector<itk::ImageRegion<2> > allPatches = ITKHelpers::GetAllPatches(reader->GetOutput()->GetLargestPossibleRegion(), patchRadius);
 
-    if(image->GetLargestPossibleRegion().IsInside(region))
-      {
-      Eigen::VectorXf v = PatchClustering::VectorizePatch(image, region);
+  for(unsigned int i = 0; i < allPatches.size(); ++i)
+  {
+    Eigen::VectorXf v = PatchClustering::VectorizePatch(image, allPatches[i]);
 
-      vectorizedPatches.push_back(v);
-      vectorizedPatchRegions.push_back(region);
-      }
-    ++imageIterator;
-    }
+    vectorizedPatches.push_back(v);
+    vectorizedPatchRegions.push_back(allPatches[i]);
+  }
 
   std::cout << "There are " << vectorizedPatchRegions.size() << " regions." << std::endl;
 
@@ -109,23 +105,27 @@ int main(int argc, char* argv[])
 
     } // end loop j
 
+
+    itk::Index<2> patchCenter = ITKHelpers::GetRegionCenter(allPatches[i]);
+    itk::Index<2> bestMatchCenter = ITKHelpers::GetRegionCenter(allPatches[bestId]);
+
     // Location
     itk::CovariantVector<float, 3> locationPixel;
-    locationPixel[0] = vectorizedPatchRegions[bestId].GetIndex()[0];
-    locationPixel[1] = vectorizedPatchRegions[bestId].GetIndex()[1];
+    locationPixel[0] = bestMatchCenter[0];
+    locationPixel[1] = bestMatchCenter[1];
     locationPixel[2] = minDistance;
 
-    locationField->SetPixel(vectorizedPatchRegions[i].GetIndex(), locationPixel);
+    locationField->SetPixel(patchCenter, locationPixel);
 
     // Offset
-    itk::Offset<2> offset = vectorizedPatchRegions[bestId].GetIndex() - vectorizedPatchRegions[i].GetIndex();
+    itk::Offset<2> offset = bestMatchCenter - patchCenter;
 
     itk::CovariantVector<float, 3> offsetPixel;
     offsetPixel[0] = offset[0];
     offsetPixel[1] = offset[1];
     offsetPixel[2] = minDistance;
 
-    offsetField->SetPixel(vectorizedPatchRegions[i].GetIndex(), offsetPixel);
+    offsetField->SetPixel(patchCenter, offsetPixel);
   } // end loop i
 
   std::stringstream ssLocation;
