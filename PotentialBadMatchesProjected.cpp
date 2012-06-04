@@ -56,6 +56,8 @@ int main(int argc, char* argv[])
 
   Eigen::MatrixXf covarianceMatrix = EigenHelpers::ConstructCovarianceMatrix(vectorizedDownsampledPatches);
 
+  std::cout << "Done computing covariance matrix." << std::endl;
+
   ////////// Project all of the patches using the covariance matrix constructed from the downsampled set /////
 
   std::vector<itk::ImageRegion<2> > allPatches = ITKHelpers::GetAllPatches(image->GetLargestPossibleRegion(), patchRadius);
@@ -67,6 +69,8 @@ int main(int argc, char* argv[])
     Eigen::VectorXf v = PatchClustering::VectorizePatch(image, allPatches[i]);
     vectorizedPatches.push_back(v);
   }
+
+  std::cout << "Done vectorizing patches." << std::endl;
 
   EigenHelpers::VectorOfVectors projectedVectors =
           EigenHelpers::DimensionalityReduction(vectorizedPatches, covarianceMatrix, numberOfDimensionsToKeep);
