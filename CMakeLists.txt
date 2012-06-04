@@ -3,7 +3,10 @@ cmake_minimum_required(VERSION 2.6)
 PROJECT(BadPatchDetection)
 
 # Necessary for c++11 usage in Helpers subsubmodule
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=gnu++0x")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse2 -std=gnu++0x") #
+
+# This makes the squaredNorm() call about twice as fast, which is very important in big loops
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse2")
 
 FIND_PACKAGE(ITK REQUIRED)
 INCLUDE(${ITK_USE_FILE})

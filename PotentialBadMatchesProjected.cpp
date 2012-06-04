@@ -41,20 +41,21 @@ int main(int argc, char* argv[])
   //std::vector<itk::ImageRegion<2> > allPatches = ITKHelpers::GetAllPatches(reader->GetOutput()->GetLargestPossibleRegion(), patchRadius);
   std::cout << "There are " << downsampledPatches.size() << " patches." << std::endl;
 
-  EigenHelpers::VectorOfVectors vectorizedDownsampledPatches;
+  EigenHelpers::VectorOfVectors vectorizedDownsampledPatches(downsampledPatches.size());
 
   for(unsigned int i = 0; i < downsampledPatches.size(); ++i)
   {
-    Eigen::VectorXf v = PatchClustering::VectorizePatch(image, downsampledPatches[i]);
-
-    vectorizedDownsampledPatches.push_back(v);
+    vectorizedDownsampledPatches[i] = PatchClustering::VectorizePatch(image, downsampledPatches[i]);
   }
 
   std::cout << "There are " << vectorizedDownsampledPatches.size() << " vectorizedDownsampledPatches." << std::endl;
 
+  std::cout << "Each vector has " << vectorizedDownsampledPatches[0].size() << " components." << std::endl;
+
   unsigned int numberOfDimensionsToKeep = 10;
 
   Eigen::MatrixXf covarianceMatrix = EigenHelpers::ConstructCovarianceMatrix(vectorizedDownsampledPatches);
+  vectorizedDownsampledPatches.clear(); // Free this memory
 
   std::cout << "Done computing covariance matrix." << std::endl;
 
@@ -62,20 +63,20 @@ int main(int argc, char* argv[])
 
   std::vector<itk::ImageRegion<2> > allPatches = ITKHelpers::GetAllPatches(image->GetLargestPossibleRegion(), patchRadius);
 
-  EigenHelpers::VectorOfVectors vectorizedPatches;
+  EigenHelpers::VectorOfVectors vectorizedPatches(allPatches.size());
 
   for(unsigned int i = 0; i < allPatches.size(); ++i)
   {
-    Eigen::VectorXf v = PatchClustering::VectorizePatch(image, allPatches[i]);
-    vectorizedPatches.push_back(v);
+    vectorizedPatches[i] = PatchClustering::VectorizePatch(image, allPatches[i]);
   }
 
-  std::cout << "Done vectorizing patches." << std::endl;
+  std::cout << "Done vectorizing " << allPatches.size() << " patches." << std::endl;
 
   EigenHelpers::VectorOfVectors projectedVectors =
           EigenHelpers::DimensionalityReduction(vectorizedPatches, covarianceMatrix, numberOfDimensionsToKeep);
 
   std::cout << "There are " << projectedVectors.size() << " projectedVectors." << std::endl;
+  covarianceMatrix.resize(0,0); // Free the memory
 
   /////////////////////
   itk::CovariantVector<float, 3> zeroVector;
@@ -94,10 +95,12 @@ int main(int argc, char* argv[])
   zeroVector.Fill(0);
   offsetField->FillBuffer(zeroVector);
 
+  float distance = 0.0f;
+
   for(unsigned int i = 0; i < projectedVectors.size(); ++i)
   {
-    std::cout << i << " of " << projectedVectors.size() << std::endl;
-
+    //std::cout << i << " of " << projectedVectors.size() << std::endl;
+    printf ("%d of %d\n", i, projectedVectors.size());
     float minDistance = std::numeric_limits<float>::max();
     unsigned int bestId = 0;
 
@@ -110,14 +113,7 @@ int main(int argc, char* argv[])
         continue;
       }
 
-      Eigen::VectorXf projectedVector1 = projectedVectors[i];
-      Eigen::VectorXf projectedVector2 = projectedVectors[j];
-
-      float distance = 0.0f;
-      for(unsigned int component = 0; component < image->GetNumberOfComponentsPerPixel(); ++component)
-      {
-        distance += (projectedVector1[component] - projectedVector2[component]) * (projectedVector1[component] - projectedVector2[component]);
-      }
+      distance = (projectedVectors[i] - projectedVectors[j]).squaredNorm();
 
       if(distance < minDistance)
       {
