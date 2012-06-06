@@ -21,6 +21,9 @@ add_subdirectory(PatchComparison)
 ADD_EXECUTABLE(PotentialBadMatches PotentialBadMatches.cpp)
 TARGET_LINK_LIBRARIES(PotentialBadMatches ${ITK_LIBRARIES} ITKHelpers)
 
+ADD_EXECUTABLE(PotentialBadMatchesVectorized PotentialBadMatchesVectorized.cpp)
+TARGET_LINK_LIBRARIES(PotentialBadMatchesVectorized ${ITK_LIBRARIES} ITKHelpers EigenHelpers)
+
 ADD_EXECUTABLE(PotentialBadMatchesProjected PotentialBadMatchesProjected.cpp)
 TARGET_LINK_LIBRARIES(PotentialBadMatchesProjected ${ITK_LIBRARIES} ITKHelpers EigenHelpers)
 

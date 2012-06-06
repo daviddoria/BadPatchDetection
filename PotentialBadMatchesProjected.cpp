@@ -10,17 +10,26 @@ int main(int argc, char* argv[])
 {
   if(argc < 4)
   {
-    std::cerr << "Required arguments: inputFileName patchRadius stride" << std::endl;
+    std::cerr << "Required arguments: inputFileName patchRadius dimensions" << std::endl;
     return EXIT_FAILURE;
   }
+
   std::stringstream ss;
-  ss << argv[1] << " " << argv[2] << " " << argv[3];
+  for(int i = 1; i < argc; ++i)
+  {
+    ss << argv[i] << " ";
+  }
+  std::cout << ss.str() << std::endl;
+
   std::string inputFileName;
   unsigned int patchRadius;
-  unsigned int stride;
-  ss >> inputFileName >> patchRadius >> stride;
+  unsigned int dimensions;
+  ss >> inputFileName >> patchRadius >> dimensions;
 
-  std::cout << "Running on " << inputFileName << " with patchRadius = " << patchRadius << " and stride = " << stride << std::endl;
+  std::cout << "Arguments:" << std::endl
+            << "Filename: " << inputFileName << std::endl
+            << "patchRadius = " << patchRadius << std::endl
+            << "dimensions = " << dimensions << std::endl;
 
   //typedef itk::VectorImage<float, 2> ImageType;
   typedef itk::Image<itk::CovariantVector<float, 3>, 2> ImageType;
@@ -34,25 +43,38 @@ int main(int argc, char* argv[])
 
   //////////// Compute the covariance matrix from a downsampled set of patches ////////////////////
 
-  std::vector<itk::Index<2> > downsampledIndices = ITKHelpers::GetDownsampledIndicesInRegion(image->GetLargestPossibleRegion(), stride);
+  //unsigned int downsampleFactor = 10;
+  unsigned int downsampleFactor = 5;
+  std::vector<itk::Index<2> > downsampledIndices =
+         ITKHelpers::GetDownsampledIndicesInRegion(image->GetLargestPossibleRegion(), downsampleFactor);
   std::vector<itk::ImageRegion<2> > downsampledPatches =
-         ITKHelpers::GetValidPatchesCenteredAtIndices(downsampledIndices, image->GetLargestPossibleRegion(), patchRadius);
+         ITKHelpers::GetValidPatchesCenteredAtIndices(downsampledIndices,
+                                                      image->GetLargestPossibleRegion(), patchRadius);
 
-  //std::vector<itk::ImageRegion<2> > allPatches = ITKHelpers::GetAllPatches(reader->GetOutput()->GetLargestPossibleRegion(), patchRadius);
+  //std::vector<itk::ImageRegion<2> > allPatches =
+            //ITKHelpers::GetAllPatches(reader->GetOutput()->GetLargestPossibleRegion(), patchRadius);
   std::cout << "There are " << downsampledPatches.size() << " patches." << std::endl;
 
   EigenHelpers::VectorOfVectors vectorizedDownsampledPatches(downsampledPatches.size());
 
+  unsigned int numberOfHistogramBins = 10;
+
   for(unsigned int i = 0; i < downsampledPatches.size(); ++i)
   {
+    // Vectorize the RGB values
     vectorizedDownsampledPatches[i] = PatchClustering::VectorizePatch(image, downsampledPatches[i]);
+
+    // Append the histogram of gradients
+    std::vector<float> histogramOfGradients =
+            ITKHelpers::HistogramOfGradients(image, downsampledPatches[i], numberOfHistogramBins);
+    Eigen::VectorXf hogEigen = EigenHelpers::STDVectorToEigenVector(histogramOfGradients);
+    Eigen::VectorXf concatenated(vectorizedDownsampledPatches[i].size() + hogEigen.size());
+    concatenated << vectorizedDownsampledPatches[i], hogEigen;
   }
 
   std::cout << "There are " << vectorizedDownsampledPatches.size() << " vectorizedDownsampledPatches." << std::endl;
 
   std::cout << "Each vector has " << vectorizedDownsampledPatches[0].size() << " components." << std::endl;
-
-  unsigned int numberOfDimensionsToKeep = 10;
 
   Eigen::MatrixXf covarianceMatrix = EigenHelpers::ConstructCovarianceMatrix(vectorizedDownsampledPatches);
   vectorizedDownsampledPatches.clear(); // Free this memory
@@ -67,15 +89,24 @@ int main(int argc, char* argv[])
 
   for(unsigned int i = 0; i < allPatches.size(); ++i)
   {
+    // Vectorize the RGB values
     vectorizedPatches[i] = PatchClustering::VectorizePatch(image, allPatches[i]);
+
+    // Append the histogram of gradients
+    std::vector<float> histogramOfGradients =
+            ITKHelpers::HistogramOfGradients(image, allPatches[i], numberOfHistogramBins);
+    Eigen::VectorXf hogEigen = EigenHelpers::STDVectorToEigenVector(histogramOfGradients);
+    Eigen::VectorXf concatenated(vectorizedPatches[i].size() + hogEigen.size());
+    concatenated << vectorizedPatches[i], hogEigen;
   }
 
   std::cout << "Done vectorizing " << allPatches.size() << " patches." << std::endl;
 
   EigenHelpers::VectorOfVectors projectedVectors =
-          EigenHelpers::DimensionalityReduction(vectorizedPatches, covarianceMatrix, numberOfDimensionsToKeep);
+          EigenHelpers::DimensionalityReduction(vectorizedPatches, covarianceMatrix, dimensions);
 
-  std::cout << "There are " << projectedVectors.size() << " projectedVectors." << std::endl;
+  std::cout << "There are " << projectedVectors.size() << " projectedVectors with "
+            << projectedVectors[0].size() << " components each." << std::endl;
   covarianceMatrix.resize(0,0); // Free the memory
 
   /////////////////////
@@ -106,7 +137,6 @@ int main(int argc, char* argv[])
 
     for(unsigned int j = 0; j < projectedVectors.size(); ++j)
     {
-      //std::cout << j << " of " << allPatches.size() << std::endl;
       // Don't compare a patch to itself
       if(i == j)
       {
@@ -147,11 +177,11 @@ int main(int argc, char* argv[])
   } // end loop i
 
   std::stringstream ssLocation;
-  ssLocation << "Location_" << patchRadius << "_" << stride << ".mha";
+  ssLocation << "Projected_Location_" << patchRadius << "_" << dimensions << ".mha";
   ITKHelpers::WriteImage(locationField.GetPointer(), ssLocation.str());
 
   std::stringstream ssOffset;
-  ssOffset << "Offset_" << patchRadius << "_" << stride << ".mha";
+  ssOffset << "Projected_Offset_" << patchRadius << "_" << dimensions << ".mha";
   ITKHelpers::WriteImage(offsetField.GetPointer(), ssOffset.str());
 
   return EXIT_SUCCESS;

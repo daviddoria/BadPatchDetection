@@ -5,6 +5,8 @@
 
 // Submodules
 #include "PatchComparison/Mask/ITKHelpers/ITKHelpers.h"
+#include "PatchClustering/PatchClustering.h"
+#include "PatchComparison/EigenHelpers/EigenHelpers.h"
 
 int main(int argc, char* argv[])
 {
@@ -17,12 +19,12 @@ int main(int argc, char* argv[])
   ss << argv[1] << " " << argv[2];
   std::string inputFileName;
   unsigned int patchRadius;
-
+  
   ss >> inputFileName >> patchRadius;
 
-  std::cout << "Running on " << inputFileName << " with patchRadius = " << patchRadius << std::endl;
+  std::cout << "Running on " << inputFileName << " with patchRadius = "
+            << patchRadius << std::endl;
 
-  //typedef itk::VectorImage<float, 2> ImageType;
   typedef itk::Image<itk::CovariantVector<float, 3>, 2> ImageType;
 
   typedef itk::ImageFileReader<ImageType> ReaderType;
@@ -32,7 +34,18 @@ int main(int argc, char* argv[])
 
   ImageType* image = reader->GetOutput();
 
-  std::vector<itk::ImageRegion<2> > allPatches = ITKHelpers::GetAllPatches(reader->GetOutput()->GetLargestPossibleRegion(), patchRadius);
+  std::vector<itk::ImageRegion<2> > allPatches =
+           ITKHelpers::GetAllPatches(reader->GetOutput()->GetLargestPossibleRegion(), patchRadius);
+
+  EigenHelpers::VectorOfVectors vectorizedPatches(allPatches.size());
+
+  for(unsigned int i = 0; i < vectorizedPatches.size(); ++i)
+  {
+    vectorizedPatches[i] = PatchClustering::VectorizePatch(image, allPatches[i]);
+  }
+
+  std::cout << "There are " << vectorizedPatches.size() << " vectorizedPatches with "
+            << vectorizedPatches[0].size() << " components each." << std::endl;
 
   itk::CovariantVector<float, 3> zeroVector;
   zeroVector.Fill(0);
@@ -50,61 +63,27 @@ int main(int argc, char* argv[])
   zeroVector.Fill(0);
   offsetField->FillBuffer(zeroVector);
 
-  for(unsigned int i = 0; i < allPatches.size(); ++i)
+  for(unsigned int i = 0; i < vectorizedPatches.size(); ++i)
   {
-    printf ("%d of %d\n", i, allPatches.size());
-    //itk::Index<2> currentPixelLocation = ITKHelpers::GetRegionCenter(allPatches[i]);
+    printf ("%d of %d\n", i, vectorizedPatches.size());
 
     float minDistance = std::numeric_limits<float>::max();
     unsigned int bestId = 0;
 
-    itk::ImageRegionConstIterator<ImageType> patch1Iterator(image, allPatches[i]);
-
-    typename ImageType::PixelType pixel1;
-    typename ImageType::PixelType pixel2;
-
-    for(unsigned int j = 0; j < allPatches.size(); ++j)
+    for(unsigned int j = 0; j < vectorizedPatches.size(); ++j)
     {
-      //std::cout << j << " of " << allPatches.size() << std::endl;
       // Don't compare a patch to itself
       if(i == j)
       {
         continue;
       }
 
-      patch1Iterator.GoToBegin();
-      itk::ImageRegionConstIterator<ImageType> patch2Iterator(image, allPatches[j]);
+      //float distance = (vectorizedPatches[i] - vectorizedPatches[j]).squaredNorm();
+      float distance = (vectorizedPatches[i] - vectorizedPatches[j]).norm();
 
-      float sumSquaredDifferences = 0.0f;
-      float distance = 0.0f;
-
-      while(!patch1Iterator.IsAtEnd())
-        {
-        pixel1 = patch1Iterator.Get();
-        pixel2 = patch2Iterator.Get();
-
-        distance = (pixel1[0] - pixel2[0]) * (pixel1[0] - pixel2[0]) +
-                   (pixel1[1] - pixel2[1]) * (pixel1[1] - pixel2[1]) +
-                   (pixel1[2] - pixel2[2]) * (pixel1[2] - pixel2[2]);
-
-        // Potentially use the maximum distance of the separate color channels.
-        // Maybe instead of the following, compute the full SSD for each channel, and take the max of those.
-//         distance = max( (pixel1[0] - pixel2[0]) * (pixel1[0] - pixel2[0]),
-//                         (pixel1[1] - pixel2[1]) * (pixel1[1] - pixel2[1]),
-//                         (pixel1[2] - pixel2[2]) * (pixel1[2] - pixel2[2]));
-        //       std::cout << "Source pixel: " << static_cast<unsigned int>(sourcePixel)
-        //                 << " target pixel: " << static_cast<unsigned int>(targetPixel)
-        //                 << "Difference: " << difference << " squaredDifference: " << squaredDifference << std::endl;
-
-        sumSquaredDifferences +=  distance;
-
-        ++patch1Iterator;
-        ++patch2Iterator;
-        } // end while iterate over patch
-
-      if(sumSquaredDifferences < minDistance)
+      if(distance < minDistance)
       {
-        minDistance = sumSquaredDifferences;
+        minDistance = distance;
         bestId = j;
       }
     } // end loop j
@@ -131,11 +110,11 @@ int main(int argc, char* argv[])
   } // end loop i
 
   std::stringstream ssLocation;
-  ssLocation << "Location_" << patchRadius << ".mha";
+  ssLocation << "Vectorized_Location_" << patchRadius << ".mha";
   ITKHelpers::WriteImage(locationField.GetPointer(), ssLocation.str());
 
   std::stringstream ssOffset;
-  ssOffset << "Offset_" << patchRadius << ".mha";
+  ssOffset << "Vectorized_Offset_" << patchRadius << ".mha";
   ITKHelpers::WriteImage(offsetField.GetPointer(), ssOffset.str());
 
   return EXIT_SUCCESS;
