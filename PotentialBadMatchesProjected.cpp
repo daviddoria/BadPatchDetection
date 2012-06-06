@@ -41,10 +41,16 @@ int main(int argc, char* argv[])
 
   ImageType* image = reader->GetOutput();
 
+  // Compute the gradient
+  typedef itk::Image<itk::CovariantVector<float, 2>, 2> GradientImageType;
+  GradientImageType::Pointer gradientImage = GradientImageType::New();
+  ITKHelpers::ComputeGradients(image, gradientImage.GetPointer());
+
   //////////// Compute the covariance matrix from a downsampled set of patches ////////////////////
 
   //unsigned int downsampleFactor = 10;
-  unsigned int downsampleFactor = 5;
+  //unsigned int downsampleFactor = 5;
+  unsigned int downsampleFactor = patchRadius;
   std::vector<itk::Index<2> > downsampledIndices =
          ITKHelpers::GetDownsampledIndicesInRegion(image->GetLargestPossibleRegion(), downsampleFactor);
   std::vector<itk::ImageRegion<2> > downsampledPatches =
@@ -53,7 +59,7 @@ int main(int argc, char* argv[])
 
   //std::vector<itk::ImageRegion<2> > allPatches =
             //ITKHelpers::GetAllPatches(reader->GetOutput()->GetLargestPossibleRegion(), patchRadius);
-  std::cout << "There are " << downsampledPatches.size() << " patches." << std::endl;
+  std::cout << "There are " << downsampledPatches.size() << " downsampled patches." << std::endl;
 
   EigenHelpers::VectorOfVectors vectorizedDownsampledPatches(downsampledPatches.size());
 
@@ -66,7 +72,7 @@ int main(int argc, char* argv[])
 
     // Append the histogram of gradients
     std::vector<float> histogramOfGradients =
-            ITKHelpers::HistogramOfGradients(image, downsampledPatches[i], numberOfHistogramBins);
+            ITKHelpers::HistogramOfGradientsPrecomputed(image, downsampledPatches[i], numberOfHistogramBins);
     Eigen::VectorXf hogEigen = EigenHelpers::STDVectorToEigenVector(histogramOfGradients);
     Eigen::VectorXf concatenated(vectorizedDownsampledPatches[i].size() + hogEigen.size());
     concatenated << vectorizedDownsampledPatches[i], hogEigen;
@@ -94,7 +100,7 @@ int main(int argc, char* argv[])
 
     // Append the histogram of gradients
     std::vector<float> histogramOfGradients =
-            ITKHelpers::HistogramOfGradients(image, allPatches[i], numberOfHistogramBins);
+            ITKHelpers::HistogramOfGradientsPrecomputed(image, allPatches[i], numberOfHistogramBins);
     Eigen::VectorXf hogEigen = EigenHelpers::STDVectorToEigenVector(histogramOfGradients);
     Eigen::VectorXf concatenated(vectorizedPatches[i].size() + hogEigen.size());
     concatenated << vectorizedPatches[i], hogEigen;
