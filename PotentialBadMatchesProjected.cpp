@@ -68,14 +68,16 @@ int main(int argc, char* argv[])
   for(unsigned int i = 0; i < downsampledPatches.size(); ++i)
   {
     // Vectorize the RGB values
-    vectorizedDownsampledPatches[i] = PatchClustering::VectorizePatch(image, downsampledPatches[i]);
+    Eigen::VectorXf vectorized = PatchClustering::VectorizePatch(image, downsampledPatches[i]);
 
     // Append the histogram of gradients
     std::vector<float> histogramOfGradients =
             ITKHelpers::HistogramOfGradientsPrecomputed(image, downsampledPatches[i], numberOfHistogramBins);
     Eigen::VectorXf hogEigen = EigenHelpers::STDVectorToEigenVector(histogramOfGradients);
-    Eigen::VectorXf concatenated(vectorizedDownsampledPatches[i].size() + hogEigen.size());
-    concatenated << vectorizedDownsampledPatches[i], hogEigen;
+    Eigen::VectorXf concatenated(vectorized.size() + hogEigen.size());
+    concatenated << vectorized, hogEigen;
+
+    vectorizedDownsampledPatches[i] = concatenated;
   }
 
   std::cout << "There are " << vectorizedDownsampledPatches.size() << " vectorizedDownsampledPatches." << std::endl;
@@ -96,14 +98,16 @@ int main(int argc, char* argv[])
   for(unsigned int i = 0; i < allPatches.size(); ++i)
   {
     // Vectorize the RGB values
-    vectorizedPatches[i] = PatchClustering::VectorizePatch(image, allPatches[i]);
+    Eigen::VectorXf vectorized = PatchClustering::VectorizePatch(image, allPatches[i]);
 
     // Append the histogram of gradients
     std::vector<float> histogramOfGradients =
             ITKHelpers::HistogramOfGradientsPrecomputed(image, allPatches[i], numberOfHistogramBins);
     Eigen::VectorXf hogEigen = EigenHelpers::STDVectorToEigenVector(histogramOfGradients);
-    Eigen::VectorXf concatenated(vectorizedPatches[i].size() + hogEigen.size());
-    concatenated << vectorizedPatches[i], hogEigen;
+    Eigen::VectorXf concatenated(vectorized.size() + hogEigen.size());
+    concatenated << vectorized, hogEigen;
+
+    vectorizedPatches[i] = concatenated;
   }
 
   std::cout << "Done vectorizing " << allPatches.size() << " patches." << std::endl;
