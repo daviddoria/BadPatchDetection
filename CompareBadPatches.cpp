@@ -6,6 +6,12 @@
 // Submodules
 #include "PatchComparison/Mask/ITKHelpers/ITKHelpers.h"
 
+struct PatchPair
+{
+  itk::ImageRegion<2> Source;
+  itk::ImageRegion<2> Target;
+};
+
 int main(int argc, char* argv[])
 {
   // This program reads a file containing the NNField (offsets) of an image.
@@ -73,6 +79,40 @@ int main(int argc, char* argv[])
 
   std::cout << "There are " << indicesToOutput.size() << " indices that pass the threshold test." << std::endl;
 
+  // Collect pairs
+
+  typedef std::pair<PatchPair, float> PairAndDistanceType;
+  std::vector<PairAndDistanceType> patchPairs(indicesToOutput.size());
+
+  for(unsigned int i = 0; i < indicesToOutput.size(); ++i)
+  {
+    itk::Index<2> sourceIndex = indicesToOutput[i];
+    itk::ImageRegion<2> sourceRegion = ITKHelpers::GetRegionInRadiusAroundPixel(sourceIndex, patchRadius);
+
+    itk::Index<2> matchIndex;
+    matchIndex[0] = sourceIndex[0] + nnOffsetField->GetPixel(sourceIndex)[0];
+    matchIndex[1] = sourceIndex[1] + nnOffsetField->GetPixel(sourceIndex)[1];
+    itk::ImageRegion<2> matchRegion = ITKHelpers::GetRegionInRadiusAroundPixel(matchIndex, patchRadius);
+
+    float distance = nnOffsetField->GetPixel(sourceIndex)[2];
+
+    PatchPair patchPair;
+    patchPair.Source = sourceRegion;
+    patchPair.Target = matchRegion;
+
+    std::pair<PatchPair, float> pairObject;
+    pairObject.first = patchPair;
+    pairObject.second = distance;
+
+    patchPairs[i] = pairObject;
+  }
+
+  // Sort by distance.
+  // Since we pass rbegin and rend,
+  // the ascending comparison function actually produces a descending sort
+  std::sort(patchPairs.rbegin(), patchPairs.rend(), Helpers::SortBySecondAccending<PairAndDistanceType>);
+
+  // Construct the output image
   ImageType::PixelType whitePixel;
   whitePixel.Fill(255);
 
@@ -85,26 +125,17 @@ int main(int argc, char* argv[])
   outputImage->Allocate();
   outputImage->FillBuffer(whitePixel);
 
-  for(unsigned int i = 0; i < indicesToOutput.size(); ++i)
+  for(unsigned int i = 0; i < patchPairs.size(); ++i)
   {
-    itk::Index<2> sourceIndex = indicesToOutput[i];
-    itk::ImageRegion<2> sourceRegion = ITKHelpers::GetRegionInRadiusAroundPixel(sourceIndex, patchRadius);
-
-    itk::Index<2> matchIndex;
-    matchIndex[0] = sourceIndex[0] + nnOffsetField->GetPixel(sourceIndex)[0];
-    matchIndex[1] = sourceIndex[1] + nnOffsetField->GetPixel(sourceIndex)[1];
-
-    itk::ImageRegion<2> matchRegion = ITKHelpers::GetRegionInRadiusAroundPixel(matchIndex, patchRadius);
-
-    // Create the output image
+    // Create the row of the output image
     itk::Index<2> sourceOutputIndex = {{0, patchSize[0] * 2 * i}};
     itk::ImageRegion<2> sourceOutputRegion(sourceOutputIndex, patchSize);
 
     itk::Index<2> matchOutputIndex = {{patchSize[0] * 2, patchSize[0] * 2 * i}};
     itk::ImageRegion<2> matchOutputRegion(matchOutputIndex, patchSize);
 
-    ITKHelpers::CopyRegion(image, sourceRegion, outputImage.GetPointer(), sourceOutputRegion);
-    ITKHelpers::CopyRegion(image, matchRegion, outputImage.GetPointer(), matchOutputRegion);
+    ITKHelpers::CopyRegion(image, patchPairs[i].first.Source, outputImage.GetPointer(), sourceOutputRegion);
+    ITKHelpers::CopyRegion(image, patchPairs[i].first.Target, outputImage.GetPointer(), matchOutputRegion);
   }
 
   ITKHelpers::WriteImage(outputImage.GetPointer(), outputFileName);
