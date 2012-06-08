@@ -29,3 +29,6 @@ TARGET_LINK_LIBRARIES(PotentialBadMatchesProjected ${ITK_LIBRARIES} ITKHelpers E
 
 ADD_EXECUTABLE(CompareBadPatches CompareBadPatches.cpp)
 TARGET_LINK_LIBRARIES(CompareBadPatches ${ITK_LIBRARIES} ITKHelpers)
+
+ADD_EXECUTABLE(TestCustomFilters TestCustomFilters.cpp)
+TARGET_LINK_LIBRARIES(TestCustomFilters ${ITK_LIBRARIES} ITKHelpers)

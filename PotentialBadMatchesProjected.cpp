@@ -5,6 +5,7 @@
 
 // Submodules
 #include "PatchComparison/Mask/ITKHelpers/ITKHelpers.h"
+#include "PatchComparison/EigenHelpers/EigenHelpers.h"
 
 int main(int argc, char* argv[])
 {
@@ -46,6 +47,7 @@ int main(int argc, char* argv[])
   GradientImageType::Pointer gradientImage = GradientImageType::New();
   ITKHelpers::ComputeGradients(image, gradientImage.GetPointer());
 
+  ITKHelpers::WriteImage(gradientImage.GetPointer(), "gradients.mha");
   //////////// Compute the covariance matrix from a downsampled set of patches ////////////////////
 
   //unsigned int downsampleFactor = 10;
@@ -84,6 +86,7 @@ int main(int argc, char* argv[])
 
   std::cout << "Each vector has " << vectorizedDownsampledPatches[0].size() << " components." << std::endl;
 
+  EigenHelpers::Standardize(vectorizedDownsampledPatches);
   Eigen::MatrixXf covarianceMatrix = EigenHelpers::ConstructCovarianceMatrix(vectorizedDownsampledPatches);
   vectorizedDownsampledPatches.clear(); // Free this memory
 
@@ -109,6 +112,8 @@ int main(int argc, char* argv[])
 
     vectorizedPatches[i] = concatenated;
   }
+
+  EigenHelpers::Standardize(vectorizedPatches);
 
   std::cout << "Done vectorizing " << allPatches.size() << " patches." << std::endl;
 
