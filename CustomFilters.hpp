@@ -12,6 +12,7 @@ template <typename TInputImage, typename TOutputImage>
 void ComputeSNRImage(const TInputImage* const image, const unsigned int patchRadius,
                      TOutputImage* const output)
 {
+  // Initialize output
   output->SetRegions(image->GetLargestPossibleRegion());
   output->Allocate();
   output->FillBuffer(0.0f);
@@ -42,6 +43,11 @@ template <typename TInputImage, typename TOutputImage>
 void ComputeBlurDifferenceImage(const TInputImage* const image, const unsigned int patchRadius,
                                 TOutputImage* const output)
 {
+  // Initialize output
+  output->SetRegions(image->GetLargestPossibleRegion());
+  output->Allocate();
+  output->FillBuffer(0.0f);
+  
   typename TInputImage::Pointer blurred = TInputImage::New();
   float sigma = 2.0f;
   ITKHelpers::BlurAllChannels(image, blurred.GetPointer(), sigma);
@@ -56,7 +62,7 @@ void ComputeBlurDifferenceImage(const TInputImage* const image, const unsigned i
       itk::ImageRegionConstIterator<TInputImage> region1Iterator(image, region);
       itk::ImageRegionConstIterator<TInputImage> region2Iterator(blurred, region);
       float sum = 0.0f;
-      while(!imageIterator.IsAtEnd())
+      while(!region2Iterator.IsAtEnd())
         {
         sum += (region1Iterator.Get() - region2Iterator.Get()).GetNorm();
         ++region1Iterator;
