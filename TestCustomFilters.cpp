@@ -32,13 +32,20 @@ int main(int argc, char* argv[])
   ImageType::Pointer image = ImageType::New();
   ITKHelpers::ReadImage(imageFileName, image.GetPointer());
 
+  // SNR
   ITKHelpersTypes::FloatScalarImageType::Pointer snrImage = ITKHelpersTypes::FloatScalarImageType::New();
   ComputeSNRImage(image.GetPointer(), 7, snrImage.GetPointer());
   ITKHelpers::WriteImage(snrImage.GetPointer(), "snr.mha");
-  
+
+  // Blur-difference
   ITKHelpersTypes::FloatScalarImageType::Pointer blurDifferenceImage = ITKHelpersTypes::FloatScalarImageType::New();
   ComputeBlurDifferenceImage(image.GetPointer(), 7, blurDifferenceImage.GetPointer());
   ITKHelpers::WriteImage(blurDifferenceImage.GetPointer(), "blurDifference.mha");
+
+  // Average neighbor difference
+  ITKHelpersTypes::FloatScalarImageType::Pointer neighborDifferenceImage = ITKHelpersTypes::FloatScalarImageType::New();
+  ComputeNeighborDifferenceImage(image.GetPointer(), 7, neighborDifferenceImage.GetPointer());
+  ITKHelpers::WriteImage(neighborDifferenceImage.GetPointer(), "neighborDifference.mha");
 
   return 0;
 }

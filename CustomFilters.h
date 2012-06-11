@@ -11,6 +11,10 @@ template <typename TInputImage, typename TOutputImage>
 void ComputeBlurDifferenceImage(const TInputImage* const image, const unsigned int patchRadius,
                                 TOutputImage* const output);
 
+template <typename TInputImage, typename TOutputImage>
+void ComputeNeighborDifferenceImage(const TInputImage* const image, const unsigned int patchRadius,
+                                    TOutputImage* const output);
+
 #include "CustomFilters.hpp"
 
 #endif

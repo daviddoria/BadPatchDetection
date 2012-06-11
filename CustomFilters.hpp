@@ -47,10 +47,11 @@ void ComputeBlurDifferenceImage(const TInputImage* const image, const unsigned i
   output->SetRegions(image->GetLargestPossibleRegion());
   output->Allocate();
   output->FillBuffer(0.0f);
-  
+
   typename TInputImage::Pointer blurred = TInputImage::New();
   float sigma = 2.0f;
   ITKHelpers::BlurAllChannels(image, blurred.GetPointer(), sigma);
+  ITKHelpers::WriteImage(blurred.GetPointer(), "blurred.png");
 
   itk::ImageRegionConstIterator<TInputImage> imageIterator(image,image->GetLargestPossibleRegion());
 
@@ -73,6 +74,57 @@ void ComputeBlurDifferenceImage(const TInputImage* const image, const unsigned i
 
     ++imageIterator;
     }
+}
+
+template <typename TInputImage, typename TOutputImage>
+void ComputeNeighborDifferenceImage(const TInputImage* const image, const unsigned int patchRadius,
+                                    TOutputImage* const output)
+{
+  // Initialize output
+  output->SetRegions(image->GetLargestPossibleRegion());
+  output->Allocate();
+  output->FillBuffer(0.0f);
+
+  itk::ImageRegionConstIteratorWithIndex<TInputImage> imageIterator(image,image->GetLargestPossibleRegion());
+
+  while(!imageIterator.IsAtEnd())
+    {
+    itk::ImageRegion<2> region = ITKHelpers::GetRegionInRadiusAroundPixel(imageIterator.GetIndex(), patchRadius);
+
+    if(image->GetLargestPossibleRegion().IsInside(region))
+      {
+      std::vector<itk::Index<2> > neighborIndices = ITKHelpers::Get8NeighborsInRegion(image->GetLargestPossibleRegion(),
+                                                                                      imageIterator.GetIndex());
+      std::vector<float> neighborDifferences;
+      for(unsigned int i = 0; i < neighborIndices.size(); ++i)
+      {
+        itk::ImageRegion<2> neighborRegion = ITKHelpers::GetRegionInRadiusAroundPixel(neighborIndices[i], patchRadius);
+        if(image->GetLargestPossibleRegion().IsInside(neighborRegion))
+        {
+          itk::ImageRegionConstIterator<TInputImage> regionIterator(image, region);
+          itk::ImageRegionConstIterator<TInputImage> neighborRegionIterator(image, neighborRegion);
+          float sum = 0.0f;
+          while(!regionIterator.IsAtEnd())
+          {
+            sum += (regionIterator.Get() - neighborRegionIterator.Get()).GetNorm();
+            ++regionIterator;
+            ++neighborRegionIterator;
+          }
+          neighborDifferences.push_back(sum);
+        } // end if this is a valid neighbor patch
+      } // end loop over neighbors
+
+      float averageNeighborDifference = 0.0f;
+      if(neighborDifferences.size() > 0)
+      {
+        averageNeighborDifference = Statistics::Average(neighborDifferences);
+      }
+
+      output->SetPixel(imageIterator.GetIndex(), averageNeighborDifference);
+      } // end if this is a valid patch to compare
+
+      ++imageIterator;
+    } // end loop over whole image
 }
 
 #endif
