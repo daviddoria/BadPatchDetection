@@ -27,6 +27,9 @@ TARGET_LINK_LIBRARIES(PotentialBadMatchesVectorized ${ITK_LIBRARIES} ITKHelpers 
 ADD_EXECUTABLE(PotentialBadMatchesProjected PotentialBadMatchesProjected.cpp)
 TARGET_LINK_LIBRARIES(PotentialBadMatchesProjected ${ITK_LIBRARIES} ITKHelpers EigenHelpers)
 
+ADD_EXECUTABLE(PotentialBadMatchesProjectedColorOnly PotentialBadMatchesProjectedColorOnly.cpp)
+TARGET_LINK_LIBRARIES(PotentialBadMatchesProjectedColorOnly ${ITK_LIBRARIES} ITKHelpers EigenHelpers)
+
 ADD_EXECUTABLE(CompareBadPatches CompareBadPatches.cpp)
 TARGET_LINK_LIBRARIES(CompareBadPatches ${ITK_LIBRARIES} ITKHelpers)
 

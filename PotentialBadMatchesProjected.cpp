@@ -4,6 +4,7 @@
 #include "PatchClustering/PatchClustering.h"
 
 // Submodules
+#include "PatchComparison/Mask/ITKHelpers/Helpers/Helpers.h"
 #include "PatchComparison/Mask/ITKHelpers/ITKHelpers.h"
 #include "PatchComparison/EigenHelpers/EigenHelpers.h"
 
@@ -50,6 +51,8 @@ int main(int argc, char* argv[])
   ITKHelpers::WriteImage(gradientImage.GetPointer(), "gradients.mha");
   //////////// Compute the covariance matrix from a downsampled set of patches ////////////////////
 
+  // This shouldn't actually speed up that much, because the covariance matrix (and hence SVD)
+  // is based on the dimensionality of the vector, not the number of vectors used.
   //unsigned int downsampleFactor = 10;
   //unsigned int downsampleFactor = 5;
   unsigned int downsampleFactor = patchRadius;
@@ -67,24 +70,41 @@ int main(int argc, char* argv[])
 
   unsigned int numberOfHistogramBins = 10;
 
+  // Vectorized a subset of the patches
   for(unsigned int i = 0; i < downsampledPatches.size(); ++i)
   {
     // Vectorize the RGB values
     Eigen::VectorXf vectorized = PatchClustering::VectorizePatch(image, downsampledPatches[i]);
-
+    if(Helpers::ContainsNaN(vectorized))
+    {
+      throw std::runtime_error("vectorized contains NaNs!");
+    }
     // Append the histogram of gradients
     std::vector<float> histogramOfGradients =
             ITKHelpers::HistogramOfGradientsPrecomputed(image, downsampledPatches[i], numberOfHistogramBins);
+    if(Helpers::ContainsNaN(histogramOfGradients))
+    {
+      throw std::runtime_error("histogramOfGradients contains NaNs!");
+    }
     Eigen::VectorXf hogEigen = EigenHelpers::STDVectorToEigenVector(histogramOfGradients);
     Eigen::VectorXf concatenated(vectorized.size() + hogEigen.size());
     concatenated << vectorized, hogEigen;
 
+    if(Helpers::ContainsNaN(concatenated))
+    {
+      throw std::runtime_error("concatenated contains NaNs!");
+    }
     vectorizedDownsampledPatches[i] = concatenated;
   }
 
   std::cout << "There are " << vectorizedDownsampledPatches.size() << " vectorizedDownsampledPatches." << std::endl;
 
   std::cout << "Each vector has " << vectorizedDownsampledPatches[0].size() << " components." << std::endl;
+
+  std::cout << "broken: " << vectorizedDownsampledPatches[0][254] << " " << vectorizedDownsampledPatches[0][255]
+            << " " << vectorizedDownsampledPatches[0][256] << std::endl;
+  std::cout << "broken: " << vectorizedDownsampledPatches[1][254] << " " << vectorizedDownsampledPatches[1][255]
+            << " " << vectorizedDownsampledPatches[1][256] << std::endl;
 
   EigenHelpers::Standardize(vectorizedDownsampledPatches);
   Eigen::MatrixXf covarianceMatrix = EigenHelpers::ConstructCovarianceMatrix(vectorizedDownsampledPatches);
@@ -98,17 +118,32 @@ int main(int argc, char* argv[])
 
   EigenHelpers::VectorOfVectors vectorizedPatches(allPatches.size());
 
+  // Vectorize all of the patches
   for(unsigned int i = 0; i < allPatches.size(); ++i)
   {
     // Vectorize the RGB values
     Eigen::VectorXf vectorized = PatchClustering::VectorizePatch(image, allPatches[i]);
+    if(Helpers::ContainsNaN(vectorized))
+    {
+      throw std::runtime_error("vectorized contains NaNs!");
+    }
 
     // Append the histogram of gradients
     std::vector<float> histogramOfGradients =
             ITKHelpers::HistogramOfGradientsPrecomputed(image, allPatches[i], numberOfHistogramBins);
+    if(Helpers::ContainsNaN(histogramOfGradients))
+    {
+      throw std::runtime_error("histogramOfGradients contains NaNs!");
+    }
+
     Eigen::VectorXf hogEigen = EigenHelpers::STDVectorToEigenVector(histogramOfGradients);
     Eigen::VectorXf concatenated(vectorized.size() + hogEigen.size());
     concatenated << vectorized, hogEigen;
+
+    if(Helpers::ContainsNaN(concatenated))
+    {
+      throw std::runtime_error("concatenated contains NaNs!");
+    }
 
     vectorizedPatches[i] = concatenated;
   }
@@ -117,13 +152,18 @@ int main(int argc, char* argv[])
 
   std::cout << "Done vectorizing " << allPatches.size() << " patches." << std::endl;
 
+//   EigenHelpers::VectorOfVectors projectedVectors =
+//           EigenHelpers::DimensionalityReduction(vectorizedPatches, covarianceMatrix, dimensions);
+
+  float singularWeightToKeep = 0.5f;
   EigenHelpers::VectorOfVectors projectedVectors =
-          EigenHelpers::DimensionalityReduction(vectorizedPatches, covarianceMatrix, dimensions);
+          EigenHelpers::DimensionalityReduction(vectorizedPatches, covarianceMatrix, singularWeightToKeep);
 
   std::cout << "There are " << projectedVectors.size() << " projectedVectors with "
             << projectedVectors[0].size() << " components each." << std::endl;
   covarianceMatrix.resize(0,0); // Free the memory
 
+  exit(-1);
   /////////////////////
   itk::CovariantVector<float, 3> zeroVector;
   zeroVector.Fill(0);
