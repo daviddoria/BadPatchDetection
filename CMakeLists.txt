@@ -9,7 +9,7 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse2 -std=gnu++0x") #
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse2")
 
 FIND_PACKAGE(ITK REQUIRED ITKCommon ITKIOImageBase ITKIOPNG ITKDistanceMap
-ITKImageIntensity ITKImageFeature ITKMathematicalMorphology ITKBinaryMathematicalMorphology)
+            ITKImageIntensity ITKImageFeature ITKMathematicalMorphology ITKBinaryMathematicalMorphology)
 INCLUDE(${ITK_USE_FILE})
 
 # Not sure why this is necessary here - it gets included from the PatchClustering submodule.
