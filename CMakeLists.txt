@@ -46,3 +46,6 @@ TARGET_LINK_LIBRARIES(TestCustomFilters ${ITK_LIBRARIES} ITKHelpers)
 
 ADD_EXECUTABLE(WriteAllBestMatches WriteAllBestMatches.cpp)
 TARGET_LINK_LIBRARIES(WriteAllBestMatches ${ITK_LIBRARIES} Mask)
+
+ADD_EXECUTABLE(WritePatchPair WritePatchPair.cpp)
+TARGET_LINK_LIBRARIES(WritePatchPair ${ITK_LIBRARIES} Mask PatchComparison)
