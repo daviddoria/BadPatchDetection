@@ -47,9 +47,11 @@ int main(int argc, char* argv[])
   PairReader::PairType selectedPair = pairs[pairId];
 
   itk::ImageRegion<2> targetRegion = selectedPair.first;
+  std::cout << "Target region: " << targetRegion << std::endl;
 
   itk::ImageRegion<2> sourceRegion = selectedPair.second;
-
+  std::cout << "Source region: " << sourceRegion << std::endl;
+  
   // Write the patches
   ITKHelpers::WriteRegion(image, targetRegion, "target.png");
   ITKHelpers::WriteRegion(image, sourceRegion, "source.png");
