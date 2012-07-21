@@ -5,8 +5,7 @@
 // Submodules
 #include "Helpers/Helpers.h"
 #include "ITKHelpers/ITKHelpers.h"
-#include "PatchComparison/SelfPatchCompare.h"
-#include "PatchComparison/SSD.h"
+#include "PatchComparison/SelfPatchCompareVectorized.h"
 
 int main(int argc, char* argv[])
 {
@@ -63,24 +62,21 @@ int main(int argc, char* argv[])
     ssTargetPatch << "Target_" << Helpers::ZeroPad(queryPatchId, 6) << ".png";
     ITKHelpers::WriteRGBImage(targetImage.GetPointer(), ssTargetPatch.str());
 
-    SSD<ImageType>* ssdDistanceFunctor = new SSD<ImageType>;
-    ssdDistanceFunctor->SetImage(image);
-
-    SelfPatchCompare<ImageType> selfPatchCompare;
-    selfPatchCompare.SetPatchDistanceFunctor(ssdDistanceFunctor);
+    SelfPatchCompareVectorized<ImageType> selfPatchCompare;
     selfPatchCompare.SetImage(image);
-    //this->PatchCompare.SetMask(this->MaskImage);
-    selfPatchCompare.CreateFullyValidMask();
     selfPatchCompare.SetTargetRegion(targetRegion);
+    selfPatchCompare.Initialize();
     selfPatchCompare.ComputePatchScores();
 
-    std::vector<SelfPatchCompare<ImageType>::PatchDataType> topPatches = selfPatchCompare.GetPatchData();
+    std::vector<SelfPatchCompareVectorized<ImageType>::PatchDataType> topPatches =
+        selfPatchCompare.GetPatchData();
 
     // The very best patch should be exactly the query patch (with score 0)
 
     // Sort the top of the data
     std::partial_sort(topPatches.begin(), topPatches.begin() + 10, // This 10 is arbitrary
-                      topPatches.end(), Helpers::SortBySecondAccending<SelfPatchCompare<ImageType>::PatchDataType>);
+                      topPatches.end(),
+                      Helpers::SortBySecondAccending<SelfPatchCompareVectorized<ImageType>::PatchDataType>);
 
     if(topPatches[0].second != 0.0f)
     {

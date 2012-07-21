@@ -45,7 +45,10 @@ ADD_EXECUTABLE(TestCustomFilters TestCustomFilters.cpp)
 TARGET_LINK_LIBRARIES(TestCustomFilters ${ITK_LIBRARIES} ITKHelpers)
 
 ADD_EXECUTABLE(WriteAllBestMatches WriteAllBestMatches.cpp)
-TARGET_LINK_LIBRARIES(WriteAllBestMatches ${ITK_LIBRARIES} Mask)
+TARGET_LINK_LIBRARIES(WriteAllBestMatches ${ITK_LIBRARIES} Mask PatchComparison)
+
+ADD_EXECUTABLE(WriteAllBestMatchesVectorized WriteAllBestMatchesVectorized.cpp)
+TARGET_LINK_LIBRARIES(WriteAllBestMatchesVectorized ${ITK_LIBRARIES} Mask PatchComparison)
 
 ADD_EXECUTABLE(WritePatchPair WritePatchPair.cpp)
 TARGET_LINK_LIBRARIES(WritePatchPair ${ITK_LIBRARIES} Mask PatchComparison)
