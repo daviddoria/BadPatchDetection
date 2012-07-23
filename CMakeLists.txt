@@ -52,3 +52,5 @@ TARGET_LINK_LIBRARIES(WriteAllBestMatchesVectorized ${ITK_LIBRARIES} Mask PatchC
 
 ADD_EXECUTABLE(WritePatchPair WritePatchPair.cpp)
 TARGET_LINK_LIBRARIES(WritePatchPair ${ITK_LIBRARIES} Mask PatchComparison)
+
+add_subdirectory(Experiments)
