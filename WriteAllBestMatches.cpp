@@ -103,7 +103,9 @@ int main(int argc, char* argv[])
     ssSourcePatch << "Source_" << Helpers::ZeroPad(queryPatchId, 6) << ".png";
     ITKHelpers::WriteRGBImage(sourceImage.GetPointer(), ssSourcePatch.str());
 
-    fout << "target: " << targetRegion.GetIndex() << " source: " << sourceRegion.GetIndex()<< std::endl;
+    fout << "target: " << targetRegion.GetIndex()
+         << " source: " << sourceRegion.GetIndex()
+         << " score: " << topPatches[1].second << std::endl;
   }
 
   fout.close();

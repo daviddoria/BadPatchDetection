@@ -52,6 +52,11 @@ int main(int argc, char* argv[])
   // Open the log file for writing
   std::ofstream fout(logFileName.c_str());
 
+  SelfPatchCompareVectorized<ImageType> selfPatchCompare;
+  selfPatchCompare.SetImage(image);
+  selfPatchCompare.SetTargetRegion(allPatches[0]); // We just need to provide any patch to give it the size
+  selfPatchCompare.Initialize();
+
   for(unsigned int queryPatchId = 0; queryPatchId < allPatches.size(); ++queryPatchId)
   {
     std::cout << "Query patch: " << queryPatchId << std::endl;
@@ -62,10 +67,7 @@ int main(int argc, char* argv[])
     ssTargetPatch << "Target_" << Helpers::ZeroPad(queryPatchId, 6) << ".png";
     ITKHelpers::WriteRGBImage(targetImage.GetPointer(), ssTargetPatch.str());
 
-    SelfPatchCompareVectorized<ImageType> selfPatchCompare;
-    selfPatchCompare.SetImage(image);
     selfPatchCompare.SetTargetRegion(targetRegion);
-    selfPatchCompare.Initialize();
     selfPatchCompare.ComputePatchScores();
 
     std::vector<SelfPatchCompareVectorized<ImageType>::PatchDataType> topPatches =
@@ -99,7 +101,9 @@ int main(int argc, char* argv[])
     ssSourcePatch << "Source_" << Helpers::ZeroPad(queryPatchId, 6) << ".png";
     ITKHelpers::WriteRGBImage(sourceImage.GetPointer(), ssSourcePatch.str());
 
-    fout << "target: " << targetRegion.GetIndex() << " source: " << sourceRegion.GetIndex()<< std::endl;
+    fout << "target: " << targetRegion.GetIndex()
+         << " source: " << sourceRegion.GetIndex()
+         << " score: " << topPatches[1].second << std::endl;
   }
 
   fout.close();
